@@ -1,115 +1,140 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>🎵 Player com Playlist</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Player de Música Simples</title>
 <style>
-    body { font-family: Arial, sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
-    h1 { color: #00ffcc; }
-    input, button { padding: 8px; margin: 5px; }
-    button { cursor: pointer; }
-    ul { list-style: none; padding: 0; }
-    li { margin: 5px 0; background: #333; padding: 5px; border-radius: 5px; }
+  body { font-family: Arial, sans-serif; margin: 2rem; }
+  #playlist { margin-top: 1rem; }
+  .song { cursor: pointer; margin: 4px 0; }
+  .current { font-weight: bold; }
+  button { margin-right: 0.5rem; }
 </style>
 </head>
 <body>
 
-<h1>🎵 Player de Música</h1>
+<h2>Player de Música</h2>
 
-<!-- Campo para adicionar música -->
-<input type="text" id="songUrl" placeholder="Cole o link do MP3" size="40">
-<button onclick="addSong()">Adicionar Música</button>
+<input type="text" id="inputLink" placeholder="Cole link do YouTube aqui" style="width: 300px;" />
+<button id="btnAdd">Adicionar (PLAY)</button>
 
-<br><br>
+<div style="margin-top:1rem;">
+  <button id="btnPlay">Play</button>
+  <button id="btnPause">Pause</button>
+  <button id="btnSkip">Skip</button>
+  <button id="btnStop">Stop</button>
+</div>
 
-<!-- Controles -->
-<button onclick="playMusic()">▶️ Tocar</button>
-<button onclick="pauseMusic()">⏸ Pausar</button>
-<button onclick="skipSong()">⏭ Pular</button>
-<button onclick="removeSong()">❌ Remover Atual</button>
+<div id="playlist"></div>
 
-<br><br>
-
-<!-- Player de áudio -->
-<audio id="player" controls autoplay></audio>
-
-<!-- Lista de músicas -->
-<h3>📜 Playlist</h3>
-<ul id="playlist"></ul>
+<!-- Player oculto -->
+<div id="player"></div>
 
 <script>
-    let playlist = [];
-    let currentIndex = 0;
-    const player = document.getElementById("player");
-    const playlistElement = document.getElementById("playlist");
+// API do YouTube
+var tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+document.body.appendChild(tag);
 
-    function addSong() {
-        const url = document.getElementById("songUrl").value.trim();
-        if (url) {
-            playlist.push(url);
-            updatePlaylist();
-            document.getElementById("songUrl").value = "";
-            if (playlist.length === 1) {
-                playMusic();
-            }
-        } else {
-            alert("Cole um link válido de áudio!");
-        }
+let player;
+let playlist = [];
+let currentIndex = 0;
+
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player('player', {
+    height: '0',
+    width: '0',
+    events: {
+      'onReady': onPlayerReady,
+      'onStateChange': onPlayerStateChange
     }
+  });
+}
 
-    function removeSong() {
-        if (playlist.length > 0) {
-            playlist.splice(currentIndex, 1);
-            if (currentIndex >= playlist.length) currentIndex = 0;
-            updatePlaylist();
-            if (playlist.length > 0) {
-                playMusic();
-            } else {
-                player.pause();
-                player.src = "";
-            }
-        }
-    }
+function onPlayerReady(event) {
+  console.log("Player pronto!");
+}
 
-    function updatePlaylist() {
-        playlistElement.innerHTML = "";
-        playlist.forEach((song, index) => {
-            const li = document.createElement("li");
-            li.textContent = (index === currentIndex ? "🎶 " : "") + song;
-            playlistElement.appendChild(li);
-        });
-    }
+function onPlayerStateChange(event) {
+  // Quando música termina, toca próxima
+  if(event.data === YT.PlayerState.ENDED) {
+    skip();
+  }
+}
 
-    function playMusic() {
-        if (playlist.length > 0) {
-            player.src = playlist[currentIndex];
-            player.play();
-            updatePlaylist();
-        } else {
-            alert("A playlist está vazia!");
-        }
-    }
+function extractVideoId(url) {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
 
-    function pauseMusic() {
-        player.pause();
-    }
+function playSong(index) {
+  if(index < 0 || index >= playlist.length) return;
+  currentIndex = index;
+  updatePlaylistDisplay();
+  player.loadVideoById(playlist[index]);
+  player.playVideo();
+}
 
-    function skipSong() {
-        if (playlist.length > 0) {
-            currentIndex = (currentIndex + 1) % playlist.length;
-            playMusic();
-        }
-    }
+function updatePlaylistDisplay() {
+  const container = document.getElementById("playlist");
+  container.innerHTML = "";
+  playlist.forEach((id, i) => {
+    const div = document.createElement("div");
+    div.textContent = id;
+    div.className = "song" + (i === currentIndex ? " current" : "");
+    div.onclick = () => playSong(i);
+    container.appendChild(div);
+  });
+}
 
-    // Quando a música acabar, tocar a próxima automaticamente
-    player.addEventListener("ended", () => {
-        skipSong();
-    });
+function addSong(url) {
+  const id = extractVideoId(url);
+  if(!id) {
+    alert("Link inválido!");
+    return;
+  }
+  playlist.push(id);
+  updatePlaylistDisplay();
+  playSong(playlist.length - 1);
+}
 
-    // Garante autoplay se o navegador bloquear
-    document.addEventListener("click", () => {
-        player.play().catch(() => {});
-    }, { once: true });
+function skip() {
+  if(currentIndex + 1 < playlist.length) {
+    playSong(currentIndex + 1);
+  } else {
+    player.stopVideo();
+    alert("Fim da playlist.");
+  }
+}
+
+// Event listeners dos botões
+document.getElementById("btnAdd").onclick = () => {
+  const url = document.getElementById("inputLink").value.trim();
+  if(url) {
+    addSong(url);
+    document.getElementById("inputLink").value = "";
+  }
+};
+
+document.getElementById("btnPlay").onclick = () => {
+  player.playVideo();
+};
+
+document.getElementById("btnPause").onclick = () => {
+  player.pauseVideo();
+};
+
+document.getElementById("btnSkip").onclick = skip;
+
+document.getElementById("btnStop").onclick = () => {
+  player.stopVideo();
+  playlist = [];
+  currentIndex = 0;
+  updatePlaylistDisplay();
+};
+
 </script>
 
 </body>
