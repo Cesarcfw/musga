@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>🎵 Player com Playlist</title>
+<style>
+    body { font-family: Arial, sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
+    h1 { color: #00ffcc; }
+    input, button { padding: 8px; margin: 5px; }
+    button { cursor: pointer; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 5px 0; background: #333; padding: 5px; border-radius: 5px; }
+</style>
+</head>
+<body>
+
+<h1>🎵 Player de Música</h1>
+
+<!-- Campo para adicionar música -->
+<input type="text" id="songUrl" placeholder="Cole o link do MP3" size="40">
+<button onclick="addSong()">Adicionar Música</button>
+
+<br><br>
+
+<!-- Controles -->
+<button onclick="playMusic()">▶️ Tocar</button>
+<button onclick="pauseMusic()">⏸ Pausar</button>
+<button onclick="skipSong()">⏭ Pular</button>
+<button onclick="removeSong()">❌ Remover Atual</button>
+
+<br><br>
+
+<!-- Player de áudio -->
+<audio id="player" controls autoplay></audio>
+
+<!-- Lista de músicas -->
+<h3>📜 Playlist</h3>
+<ul id="playlist"></ul>
+
+<script>
+    let playlist = [];
+    let currentIndex = 0;
+    const player = document.getElementById("player");
+    const playlistElement = document.getElementById("playlist");
+
+    function addSong() {
+        const url = document.getElementById("songUrl").value.trim();
+        if (url) {
+            playlist.push(url);
+            updatePlaylist();
+            document.getElementById("songUrl").value = "";
+            if (playlist.length === 1) {
+                playMusic();
+            }
+        } else {
+            alert("Cole um link válido de áudio!");
+        }
+    }
+
+    function removeSong() {
+        if (playlist.length > 0) {
+            playlist.splice(currentIndex, 1);
+            if (currentIndex >= playlist.length) currentIndex = 0;
+            updatePlaylist();
+            if (playlist.length > 0) {
+                playMusic();
+            } else {
+                player.pause();
+                player.src = "";
+            }
+        }
+    }
+
+    function updatePlaylist() {
+        playlistElement.innerHTML = "";
+        playlist.forEach((song, index) => {
+            const li = document.createElement("li");
+            li.textContent = (index === currentIndex ? "🎶 " : "") + song;
+            playlistElement.appendChild(li);
+        });
+    }
+
+    function playMusic() {
+        if (playlist.length > 0) {
+            player.src = playlist[currentIndex];
+            player.play();
+            updatePlaylist();
+        } else {
+            alert("A playlist está vazia!");
+        }
+    }
+
+    function pauseMusic() {
+        player.pause();
+    }
+
+    function skipSong() {
+        if (playlist.length > 0) {
+            currentIndex = (currentIndex + 1) % playlist.length;
+            playMusic();
+        }
+    }
+
+    // Quando a música acabar, tocar a próxima automaticamente
+    player.addEventListener("ended", () => {
+        skipSong();
+    });
+
+    // Garante autoplay se o navegador bloquear
+    document.addEventListener("click", () => {
+        player.play().catch(() => {});
+    }, { once: true });
+</script>
+
+</body>
+</html>
