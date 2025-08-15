@@ -8,12 +8,25 @@
   body {
     font-family: Arial, sans-serif;
     margin: 2rem;
-    background: #f7f7f7;
-    color: #333;
+    background: var(--bg-color);
+    color: var(--text-color);
+    transition: background 0.3s, color 0.3s;
+  }
+  :root {
+    --bg-color: #f7f7f7;
+    --text-color: #333;
+    --card-bg: #fff;
+    --highlight: #d0eaff;
+  }
+  body.dark {
+    --bg-color: #1e1e1e;
+    --text-color: #eee;
+    --card-bg: #2c2c2c;
+    --highlight: #3a4d5c;
   }
   h2 {
     text-align: center;
-    color: #444;
+    color: var(--text-color);
   }
   #controls {
     display: flex;
@@ -26,34 +39,38 @@
     padding: 0.5rem;
     border-radius: 5px;
     border: 1px solid #ccc;
+    background: var(--card-bg);
+    color: var(--text-color);
   }
   button {
-    background: #0078ff;
-    color: white;
     cursor: pointer;
     border: none;
   }
-  button:hover {
+  button.action {
+    background: #0078ff;
+    color: white;
+  }
+  button.action:hover {
     background: #005fc0;
   }
   #playlist {
     margin-top: 1.5rem;
-    background: white;
+    background: var(--card-bg);
     border-radius: 8px;
     padding: 0.5rem;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   }
   .song {
     padding: 8px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #5553;
     cursor: pointer;
     transition: background 0.2s;
   }
   .song:hover {
-    background: #f0f8ff;
+    background: var(--highlight);
   }
   .current {
-    background: #d0eaff;
+    background: var(--highlight);
     font-weight: bold;
   }
   #player {
@@ -61,29 +78,55 @@
     justify-content: center;
     margin-top: 1rem;
   }
+  #top-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
 </style>
 </head>
 <body>
+
+<div id="top-bar">
+  <button id="toggleTheme">🌙 Modo Escuro</button>
+</div>
 
 <h2>🎵 Player de Música</h2>
 
 <div style="text-align:center;">
   <input type="text" id="inputLink" placeholder="Cole link do YouTube aqui" style="width: 300px;" />
-  <button id="btnAdd">Adicionar (PLAY)</button>
+  <button id="btnAdd" class="action">Adicionar</button>
 </div>
 
 <div id="controls">
-  <button id="btnPlay">▶ Play</button>
-  <button id="btnPause">⏸ Pause</button>
-  <button id="btnSkip">⏭ Skip</button>
-  <button id="btnStop">⏹ Stop</button>
+  <button id="btnPrev" class="action">⏮ Voltar</button>
+  <button id="btnPlay" class="action">▶ Play</button>
+  <button id="btnPause" class="action">⏸ Pause</button>
+  <button id="btnSkip" class="action">⏭ Avançar</button>
+  <button id="btnStop" class="action">⏹ Parar</button>
 </div>
 
 <div id="player"></div>
 <div id="playlist"></div>
 
 <script>
-// Carrega API do YouTube
+// ----------- Tema (Modo Escuro/Claro) -----------
+function loadTheme() {
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark");
+    document.getElementById("toggleTheme").textContent = "☀ Modo Claro";
+  }
+}
+function toggleTheme() {
+  document.body.classList.toggle("dark");
+  const isDark = document.body.classList.contains("dark");
+  document.getElementById("toggleTheme").textContent = isDark ? "☀ Modo Claro" : "🌙 Modo Escuro";
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+}
+document.getElementById("toggleTheme").onclick = toggleTheme;
+loadTheme();
+
+// ----------- YouTube Player API -----------
 var tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 document.body.appendChild(tag);
@@ -108,7 +151,6 @@ function onPlayerStateChange(event) {
     skip();
   }
   if (event.data === YT.PlayerState.PLAYING) {
-    // Atualiza título da música atual
     const data = player.getVideoData();
     if (playlist[currentIndex]) {
       playlist[currentIndex].title = data.title;
@@ -150,7 +192,10 @@ function addSong(url) {
   }
   playlist.push({ id, title: "(Carregando título...)" });
   updatePlaylistDisplay();
-  playSong(playlist.length - 1);
+  // Só toca automaticamente se for a primeira música
+  if (playlist.length === 1) {
+    playSong(0);
+  }
 }
 
 function skip() {
@@ -162,7 +207,15 @@ function skip() {
   }
 }
 
-// Botões
+function prevSong() {
+  if (currentIndex > 0) {
+    playSong(currentIndex - 1);
+  } else {
+    alert("Já está na primeira música.");
+  }
+}
+
+// ----------- Botões -----------
 document.getElementById("btnAdd").onclick = () => {
   const url = document.getElementById("inputLink").value.trim();
   if (url) {
@@ -173,6 +226,7 @@ document.getElementById("btnAdd").onclick = () => {
 document.getElementById("btnPlay").onclick = () => player.playVideo();
 document.getElementById("btnPause").onclick = () => player.pauseVideo();
 document.getElementById("btnSkip").onclick = skip;
+document.getElementById("btnPrev").onclick = prevSong;
 document.getElementById("btnStop").onclick = () => {
   player.stopVideo();
   playlist = [];
