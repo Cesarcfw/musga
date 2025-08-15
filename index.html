@@ -149,6 +149,24 @@
     gap: 0.5rem;
     margin-bottom: 0.5rem;
   }
+  #bongo-cat-area {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 15px;
+    margin-bottom: 0.6rem;
+    margin-top: 0.3rem;
+  }
+  .bongo-cat-img {
+    width: 100px;
+    transition: transform 0.15s;
+    filter: drop-shadow(0px 2px 6px #0002);
+    user-select: none;
+    pointer-events: none;
+  }
+  .bongo-hit {
+    transform: translateY(8px) scale(1.07);
+  }
 </style>
 </head>
 <body>
@@ -163,6 +181,12 @@
   <div id="input-section">
     <input type="text" id="inputLink" placeholder="Cole link do YouTube aqui" style="width: 300px;" />
     <button id="btnAdd" class="action">Adicionar</button>
+  </div>
+
+  <!-- Bongo Cats Animados -->
+  <div id="bongo-cat-area">
+    <img id="bongoCatL" src="https://raw.githubusercontent.com/Externalizable/bongo.cat/master/src/images/bongo_cat_left.png" alt="Bongo Cat Esquerda" class="bongo-cat-img">
+    <img id="bongoCatR" src="https://raw.githubusercontent.com/Externalizable/bongo.cat/master/src/images/bongo_cat_right.png" alt="Bongo Cat Direita" class="bongo-cat-img">
   </div>
 
   <!-- Barra de progresso e tempo -->
@@ -213,6 +237,8 @@ let playlist = []; // [{id, title, duration, thumb}]
 let currentIndex = 0;
 let duration = 0;
 let progressBarInterval;
+let bongoInterval;
+let bongoBeat = 0;
 
 function createHiddenPlayer() {
   // Cria um player invisível
@@ -238,11 +264,13 @@ function onYouTubeIframeAPIReady() {
 function onPlayerStateChange(event) {
   if (event.data === YT.PlayerState.ENDED) {
     skip();
+    stopBongoInterval();
   }
   if (event.data === YT.PlayerState.PLAYING) {
     duration = player.getDuration();
     updateProgressBar();
     startProgressBarInterval();
+    startBongoInterval();
     const data = player.getVideoData();
     const dur = formatTime(duration);
     if (playlist[currentIndex]) {
@@ -255,9 +283,47 @@ function onPlayerStateChange(event) {
   }
   if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
     stopProgressBarInterval();
+    stopBongoInterval();
+    animateBongoIdle();
   }
 }
 
+// --------- Bongo Cats Animados ----------
+function animateBongoIdle() {
+  document.getElementById("bongoCatL").classList.remove("bongo-hit");
+  document.getElementById("bongoCatR").classList.remove("bongo-hit");
+}
+
+function animateBongoCat() {
+  // Alterna entre esquerda e direita a cada batida (0.4s)
+  bongoBeat = 1 - bongoBeat;
+  if (bongoBeat === 0) {
+    document.getElementById("bongoCatL").classList.add("bongo-hit");
+    document.getElementById("bongoCatR").classList.remove("bongo-hit");
+  } else {
+    document.getElementById("bongoCatR").classList.add("bongo-hit");
+    document.getElementById("bongoCatL").classList.remove("bongo-hit");
+  }
+}
+
+function startBongoInterval() {
+  stopBongoInterval();
+  bongoInterval = setInterval(() => {
+    if (player && player.getPlayerState() === YT.PlayerState.PLAYING) {
+      animateBongoCat();
+    }
+  }, 400); // 400ms = ~150bpm (ajuste para ficar mais rápido/lento)
+}
+
+function stopBongoInterval() {
+  if (bongoInterval) {
+    clearInterval(bongoInterval);
+    bongoInterval = null;
+    animateBongoIdle();
+  }
+}
+
+// ----------- Playlist, controles e barra -----------
 function extractVideoId(url) {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
   const match = url.match(regExp);
@@ -332,6 +398,8 @@ function skip() {
     document.getElementById("time-current").textContent = "0:00";
     document.getElementById("time-duration").textContent = "0:00";
     stopProgressBarInterval();
+    stopBongoInterval();
+    animateBongoIdle();
     alert("Fim da playlist.");
   }
 }
@@ -404,6 +472,8 @@ document.getElementById("btnStop").onclick = () => {
   document.getElementById("time-current").textContent = "0:00";
   document.getElementById("time-duration").textContent = "0:00";
   stopProgressBarInterval();
+  stopBongoInterval();
+  animateBongoIdle();
   updatePlaylistDisplay();
 };
 </script>
