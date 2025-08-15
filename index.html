@@ -59,6 +59,9 @@
     border-radius: 8px;
     padding: 0.5rem;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
   }
   .song {
     display: flex;
@@ -93,15 +96,58 @@
     background: var(--highlight);
     font-weight: bold;
   }
-  #player {
-    display: flex;
-    justify-content: center;
-    margin-top: 1rem;
-  }
   #top-bar {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
+  }
+  #progress-bar-container {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto 14px auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.07);
+    padding: 0.5rem 1rem;
+    margin-top: 1rem;
+    justify-content: center;
+  }
+  #progress-bar {
+    flex: 1;
+    height: 6px;
+    background: #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+  }
+  #progress-filled {
+    background: #0078ff;
+    height: 100%;
+    border-radius: 4px;
+    width: 0%;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  #time-current, #time-duration {
+    font-size: 13px;
+    min-width: 45px;
+    text-align: center;
+  }
+  #main-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #input-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
   }
 </style>
 </head>
@@ -113,20 +159,31 @@
 
 <h2>🎵 Player de Música</h2>
 
-<div style="text-align:center;">
-  <input type="text" id="inputLink" placeholder="Cole link do YouTube aqui" style="width: 300px;" />
-  <button id="btnAdd" class="action">Adicionar</button>
+<div id="main-area">
+  <div id="input-section">
+    <input type="text" id="inputLink" placeholder="Cole link do YouTube aqui" style="width: 300px;" />
+    <button id="btnAdd" class="action">Adicionar</button>
+  </div>
+
+  <!-- Barra de progresso e tempo -->
+  <div id="progress-bar-container">
+    <span id="time-current">0:00</span>
+    <div id="progress-bar">
+      <div id="progress-filled"></div>
+    </div>
+    <span id="time-duration">0:00</span>
+  </div>
+
+  <div id="controls">
+    <button id="btnPrev" class="action">⏮ Voltar</button>
+    <button id="btnPlay" class="action">▶ Play</button>
+    <button id="btnPause" class="action">⏸ Pause</button>
+    <button id="btnSkip" class="action">⏭ Avançar</button>
+    <button id="btnStop" class="action">⏹ Parar</button>
+  </div>
 </div>
 
-<div id="controls">
-  <button id="btnPrev" class="action">⏮ Voltar</button>
-  <button id="btnPlay" class="action">▶ Play</button>
-  <button id="btnPause" class="action">⏸ Pause</button>
-  <button id="btnSkip" class="action">⏭ Avançar</button>
-  <button id="btnStop" class="action">⏹ Parar</button>
-</div>
-
-<div id="player"></div>
+<!-- Removido o #player (tela do vídeo) -->
 <div id="playlist"></div>
 
 <script>
@@ -146,7 +203,7 @@ function toggleTheme() {
 document.getElementById("toggleTheme").onclick = toggleTheme;
 loadTheme();
 
-// ----------- YouTube Player API -----------
+// ----------- YouTube Player API (áudio oculto) -----------
 var tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 document.body.appendChild(tag);
@@ -154,11 +211,23 @@ document.body.appendChild(tag);
 let player;
 let playlist = []; // [{id, title, duration, thumb}]
 let currentIndex = 0;
+let duration = 0;
+let progressBarInterval;
+
+function createHiddenPlayer() {
+  // Cria um player invisível
+  const div = document.createElement('div');
+  div.id = 'player';
+  div.style.display = 'none';
+  document.body.appendChild(div);
+}
+
+createHiddenPlayer();
 
 function onYouTubeIframeAPIReady() {
   player = new YT.Player('player', {
-    height: '360',
-    width: '640',
+    height: '1',
+    width: '1',
     events: {
       'onReady': () => console.log("Player pronto!"),
       'onStateChange': onPlayerStateChange
@@ -171,14 +240,21 @@ function onPlayerStateChange(event) {
     skip();
   }
   if (event.data === YT.PlayerState.PLAYING) {
+    duration = player.getDuration();
+    updateProgressBar();
+    startProgressBarInterval();
     const data = player.getVideoData();
-    const dur = formatTime(player.getDuration());
+    const dur = formatTime(duration);
     if (playlist[currentIndex]) {
       playlist[currentIndex].title = data.title;
       playlist[currentIndex].duration = dur;
       playlist[currentIndex].thumb = `https://img.youtube.com/vi/${playlist[currentIndex].id}/default.jpg`;
       updatePlaylistDisplay();
     }
+    document.getElementById("time-duration").textContent = dur;
+  }
+  if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+    stopProgressBarInterval();
   }
 }
 
@@ -252,6 +328,10 @@ function skip() {
     playSong(currentIndex + 1);
   } else {
     player.stopVideo();
+    document.getElementById("progress-filled").style.width = "0%";
+    document.getElementById("time-current").textContent = "0:00";
+    document.getElementById("time-duration").textContent = "0:00";
+    stopProgressBarInterval();
     alert("Fim da playlist.");
   }
 }
@@ -264,6 +344,41 @@ function prevSong() {
   }
 }
 
+// ----------- Barra de Progresso -----------
+function updateProgressBar() {
+  if (!player || !duration) return;
+  const current = player.getCurrentTime();
+  const percent = duration ? (current / duration) * 100 : 0;
+  document.getElementById("progress-filled").style.width = percent + "%";
+  document.getElementById("time-current").textContent = formatTime(current);
+}
+
+function startProgressBarInterval() {
+  stopProgressBarInterval();
+  progressBarInterval = setInterval(() => {
+    if (player && player.getPlayerState() === YT.PlayerState.PLAYING) {
+      updateProgressBar();
+    }
+  }, 500);
+}
+
+function stopProgressBarInterval() {
+  if (progressBarInterval) {
+    clearInterval(progressBarInterval);
+    progressBarInterval = null;
+  }
+}
+
+document.getElementById("progress-bar").addEventListener("click", function(e) {
+  if (!player || !duration) return;
+  const rect = this.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const percent = x / rect.width;
+  const seekTo = percent * duration;
+  player.seekTo(seekTo, true);
+  updateProgressBar();
+});
+
 // ----------- Botões -----------
 document.getElementById("btnAdd").onclick = () => {
   const url = document.getElementById("inputLink").value.trim();
@@ -272,14 +387,23 @@ document.getElementById("btnAdd").onclick = () => {
     document.getElementById("inputLink").value = "";
   }
 };
-document.getElementById("btnPlay").onclick = () => player.playVideo();
-document.getElementById("btnPause").onclick = () => player.pauseVideo();
+document.getElementById("btnPlay").onclick = () => {
+  if (player && playlist.length > 0) player.playVideo();
+};
+document.getElementById("btnPause").onclick = () => {
+  if (player) player.pauseVideo();
+};
 document.getElementById("btnSkip").onclick = skip;
 document.getElementById("btnPrev").onclick = prevSong;
 document.getElementById("btnStop").onclick = () => {
-  player.stopVideo();
+  if (player) player.stopVideo();
   playlist = [];
   currentIndex = 0;
+  duration = 0;
+  document.getElementById("progress-filled").style.width = "0%";
+  document.getElementById("time-current").textContent = "0:00";
+  document.getElementById("time-duration").textContent = "0:00";
+  stopProgressBarInterval();
   updatePlaylistDisplay();
 };
 </script>
