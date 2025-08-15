@@ -30,6 +30,8 @@
       display: flex;
       gap: 10px;
       margin-top: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     button {
@@ -38,16 +40,32 @@
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      background-color: #007BFF;
+      color: white;
+      transition: background 0.2s;
     }
 
     button:hover {
-      opacity: 0.8;
+      background-color: #0056b3;
+    }
+
+    body.dark button {
+      background-color: #1f6feb;
     }
 
     input[type="text"] {
       padding: 10px;
       width: 300px;
       max-width: 80%;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+
+    body.dark input[type="text"] {
+      background-color: #1e1e1e;
+      color: white;
+      border: 1px solid #555;
     }
 
     .progress-container {
@@ -81,17 +99,17 @@
   </div>
 
   <!-- Campo de link -->
-  <input type="text" id="music-link" placeholder="Cole o link da música do YouTube">
+  <input type="text" id="music-link" placeholder="Cole o link direto do áudio (mp3, etc.)">
 
   <!-- Botões -->
   <div class="controls">
-    <button onclick="playMusic()">Tocar</button>
+    <button onclick="playMusic()">Adicionar & Tocar</button>
     <button onclick="goBack()">Voltar Música</button>
     <button onclick="toggleDarkMode()">Modo Escuro</button>
   </div>
 
   <!-- Player invisível -->
-  <audio id="audio-player" controls style="display:none;"></audio>
+  <audio id="audio-player" preload="metadata" style="display:none;"></audio>
 
   <script>
     let audioPlayer = document.getElementById('audio-player');
@@ -99,17 +117,19 @@
     let currentTimeEl = document.getElementById('current-time');
     let durationEl = document.getElementById('duration');
     let musicQueue = [];
-    let currentIndex = 0;
+    let currentIndex = -1; // Nenhuma música no início
 
     function playMusic() {
       let link = document.getElementById('music-link').value.trim();
       if (link) {
-        // Converter para link direto (usando YouTube API externa é melhor, mas aqui é demo)
         musicQueue.push(link);
-        if (audioPlayer.src === "") {
+
+        // Só começa a tocar se não tiver música tocando
+        if (currentIndex === -1) {
           currentIndex = 0;
           startPlaying();
         }
+
         document.getElementById('music-link').value = "";
       }
     }
@@ -132,14 +152,18 @@
 
     // Atualizar barra de progresso
     audioPlayer.addEventListener('timeupdate', () => {
-      progressBar.value = (audioPlayer.currentTime / audioPlayer.duration) * 100 || 0;
-      currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
-      durationEl.textContent = formatTime(audioPlayer.duration);
+      if (!isNaN(audioPlayer.duration)) {
+        progressBar.value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+        currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+        durationEl.textContent = formatTime(audioPlayer.duration);
+      }
     });
 
     // Alterar posição da música
     progressBar.addEventListener('input', () => {
-      audioPlayer.currentTime = (progressBar.value / 100) * audioPlayer.duration;
+      if (!isNaN(audioPlayer.duration)) {
+        audioPlayer.currentTime = (progressBar.value / 100) * audioPlayer.duration;
+      }
     });
 
     function formatTime(seconds) {
