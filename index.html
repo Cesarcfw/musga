@@ -235,11 +235,51 @@ function createHiddenPlayer() {
 
 createHiddenPlayer();
 
-// ----------- Music Visualizer (fake bars) -----------
+// ----------- Music Visualizer com Web Audio API -----------
 const visualizer = document.getElementById("music-visualizer");
 const vctx = visualizer.getContext("2d");
 let visAnimId = null;
 let visActive = false;
+let audioCtx = null;
+let analyser = null;
+let source = null;
+let youtubeIframe = null;
+
+function setupAudioAnalyser() {
+  // Tenta pegar o áudio do player YouTube via MediaElementAudioSourceNode
+  // Cria um elemento de áudio fake e sincroniza volume/mute
+  // O YouTube player está em um iframe, então há uma limitação de CORS.
+  // Solução: cria um <audio> oculto e tenta sincronizar, mas normalmente não é possível extrair o áudio do iframe YouTube por restrição do navegador.
+  // Então, tentamos pegar o elemento de vídeo do YouTube (se disponível), e usar o Web Audio API.
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!analyser) {
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      analyser.smoothingTimeConstant = 0.8;
+    }
+    // Tenta pegar a tag iframe do YouTube
+    youtubeIframe = document.getElementById('player');
+    // Tenta pegar o vídeo interno do iframe (não funciona por CORS)
+    // Então, tenta pegar um <audio> do DOM (não existe)
+    // Ou seja, no navegador moderno, só é possível se o player for um <audio> local.
+    // Como workaround, mostra um visualizer fake, mas se usar um arquivo local, funciona.
+    // Se conseguir, conecta o source
+    if (!source && youtubeIframe) {
+      // Devido à política de segurança, não é possível capturar áudio do iframe YouTube.
+      // Se quiser testar com <audio>, basta criar um elemento <audio id='audio'> e usar:
+      // let audioElem = document.getElementById('audio');
+      // source = audioCtx.createMediaElementSource(audioElem);
+      // source.connect(analyser);
+      // analyser.connect(audioCtx.destination);
+      // return true;
+      return false;
+    }
+  } catch (e) {
+    return false;
+  }
+  return false;
+}
 
 function drawVisualizer(bars = 32) {
   // Responsivo
@@ -247,15 +287,29 @@ function drawVisualizer(bars = 32) {
   const H = visualizer.height;
   vctx.clearRect(0, 0, W, H);
 
+  let dataArray = new Uint8Array(bars);
+  let useAudio = false;
+  if (analyser) {
+    try {
+      analyser.getByteFrequencyData(dataArray);
+      useAudio = true;
+    } catch (e) {
+      useAudio = false;
+    }
+  }
+
   for (let i = 0; i < bars; i++) {
-    // Fake animation: use Math.sin + current time for effect
-    const time = Date.now() / 700;
-    // Animate based on playing state
-    const amplitude = visActive ? (0.4 + 0.6 * Math.abs(Math.sin(time + i))) : 0.15;
-    const barHeight = amplitude * H * (0.8 + 0.2 * Math.sin(i + time));
+    let amplitude;
+    if (useAudio) {
+      amplitude = (dataArray[i] || 0) / 255; // 0...1
+    } else {
+      // Fallback: animação fake
+      const time = Date.now() / 700;
+      amplitude = visActive ? (0.4 + 0.6 * Math.abs(Math.sin(time + i))) : 0.15;
+    }
+    const barHeight = amplitude * H * (0.8 + 0.2 * Math.sin(i + Date.now() / 1200));
     const x = i * (W / bars);
     const barWidth = (W / bars) * 0.8;
-    // Color: blue if playing, gray if paused
     vctx.fillStyle = visActive ? "#0078ff" : "#aaa";
     vctx.fillRect(x, H - barHeight, barWidth, barHeight);
   }
@@ -268,6 +322,7 @@ function animateVisualizer() {
 
 function startVisualizer() {
   visActive = true;
+  setupAudioAnalyser();
   if (!visAnimId) animateVisualizer();
 }
 function stopVisualizer() {
