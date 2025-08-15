@@ -149,6 +149,14 @@
     gap: 0.5rem;
     margin-bottom: 0.5rem;
   }
+  #music-visualizer {
+    display:block; 
+    margin:0 auto 12px auto; 
+    width:100%; 
+    max-width:500px; 
+    background:var(--card-bg); 
+    border-radius:8px;
+  }
 </style>
 </head>
 <body>
@@ -164,6 +172,9 @@
     <input type="text" id="inputLink" placeholder="Cole link do YouTube aqui" style="width: 300px;" />
     <button id="btnAdd" class="action">Adicionar</button>
   </div>
+
+  <!-- Visualizador de música -->
+  <canvas id="music-visualizer" width="500" height="80"></canvas>
 
   <!-- Barra de progresso e tempo -->
   <div id="progress-bar-container">
@@ -224,6 +235,54 @@ function createHiddenPlayer() {
 
 createHiddenPlayer();
 
+// ----------- Music Visualizer (fake bars) -----------
+const visualizer = document.getElementById("music-visualizer");
+const vctx = visualizer.getContext("2d");
+let visAnimId = null;
+let visActive = false;
+
+function drawVisualizer(bars = 32) {
+  // Responsivo
+  const W = visualizer.width = visualizer.offsetWidth;
+  const H = visualizer.height;
+  vctx.clearRect(0, 0, W, H);
+
+  for (let i = 0; i < bars; i++) {
+    // Fake animation: use Math.sin + current time for effect
+    const time = Date.now() / 700;
+    // Animate based on playing state
+    const amplitude = visActive ? (0.4 + 0.6 * Math.abs(Math.sin(time + i))) : 0.15;
+    const barHeight = amplitude * H * (0.8 + 0.2 * Math.sin(i + time));
+    const x = i * (W / bars);
+    const barWidth = (W / bars) * 0.8;
+    // Color: blue if playing, gray if paused
+    vctx.fillStyle = visActive ? "#0078ff" : "#aaa";
+    vctx.fillRect(x, H - barHeight, barWidth, barHeight);
+  }
+}
+
+function animateVisualizer() {
+  drawVisualizer();
+  visAnimId = requestAnimationFrame(animateVisualizer);
+}
+
+function startVisualizer() {
+  visActive = true;
+  if (!visAnimId) animateVisualizer();
+}
+function stopVisualizer() {
+  visActive = false;
+  drawVisualizer();
+  if (visAnimId) {
+    cancelAnimationFrame(visAnimId);
+    visAnimId = null;
+  }
+}
+
+// Responsivo ao redimensionar janela
+window.addEventListener("resize", () => drawVisualizer());
+drawVisualizer(); // Inicializa
+
 function onYouTubeIframeAPIReady() {
   player = new YT.Player('player', {
     height: '1',
@@ -238,11 +297,13 @@ function onYouTubeIframeAPIReady() {
 function onPlayerStateChange(event) {
   if (event.data === YT.PlayerState.ENDED) {
     skip();
+    stopVisualizer();
   }
   if (event.data === YT.PlayerState.PLAYING) {
     duration = player.getDuration();
     updateProgressBar();
     startProgressBarInterval();
+    startVisualizer(); // visualizer ON
     const data = player.getVideoData();
     const dur = formatTime(duration);
     if (playlist[currentIndex]) {
@@ -255,6 +316,7 @@ function onPlayerStateChange(event) {
   }
   if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
     stopProgressBarInterval();
+    stopVisualizer(); // visualizer OFF
   }
 }
 
@@ -332,6 +394,7 @@ function skip() {
     document.getElementById("time-current").textContent = "0:00";
     document.getElementById("time-duration").textContent = "0:00";
     stopProgressBarInterval();
+    stopVisualizer();
     alert("Fim da playlist.");
   }
 }
@@ -404,6 +467,7 @@ document.getElementById("btnStop").onclick = () => {
   document.getElementById("time-current").textContent = "0:00";
   document.getElementById("time-duration").textContent = "0:00";
   stopProgressBarInterval();
+  stopVisualizer();
   updatePlaylistDisplay();
 };
 </script>
