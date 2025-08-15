@@ -1,5 +1,15 @@
 # musga
+Site demonstra por meio de botões uma linguagem de musica com os seguintes comandos:
+
+PREFIXO: CONFIGURAÇÃO DE ALGUM PREFIXO PARA ATIVAR O SISTEMA
 PLAY: COMANDO PARA STARTAR A MUSICA SEGUINDO COM O LINK DA MUSICA.
 SKIP: COMANDO PARA PULAR A MUSICA. (USADO PARA PULAR A MUSICA QUE ESTÁ TOCANDO)
 STOP: COMANDO USADO PARA PARAR DE TOCAR A LISTA DE REPRODUÇÃO.
 PAUSE: COMANDO USADO PARA PARAR A MUSICA QUE ESTA SENDO TOCADA.(PARA VOLTAR A TOCAR A MUSICA USAR O COMANDO PLAY SEM A NECESSIDADE DE COLOCAR O LINK DA MUSICA)
+RETURN: COMANDO USADO PARA VOLTAR A MUSICA DA PLAYLIST.
+
+A sentença para uso dos comandos na forma dos bots são:
+- prefixo <|PLAY|> <|LINK|>
+  comando usado para iniciar o sistema de musica!
+- prefixo <|SKIP|STOP|PAUSE|RETURN>
+  comando usado para fazer as funções referentes a fila de musicas
