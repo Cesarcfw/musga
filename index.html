@@ -61,6 +61,9 @@
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   }
   .song {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 8px;
     border-bottom: 1px solid #5553;
     cursor: pointer;
@@ -68,6 +71,23 @@
   }
   .song:hover {
     background: var(--highlight);
+  }
+  .song img {
+    width: 60px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+  .song .info {
+    flex: 1;
+  }
+  .song .title {
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .song .duration {
+    font-size: 12px;
+    opacity: 0.7;
   }
   .current {
     background: var(--highlight);
@@ -132,7 +152,7 @@ tag.src = "https://www.youtube.com/iframe_api";
 document.body.appendChild(tag);
 
 let player;
-let playlist = []; // [{id, title}]
+let playlist = []; // [{id, title, duration, thumb}]
 let currentIndex = 0;
 
 function onYouTubeIframeAPIReady() {
@@ -152,8 +172,11 @@ function onPlayerStateChange(event) {
   }
   if (event.data === YT.PlayerState.PLAYING) {
     const data = player.getVideoData();
+    const dur = formatTime(player.getDuration());
     if (playlist[currentIndex]) {
       playlist[currentIndex].title = data.title;
+      playlist[currentIndex].duration = dur;
+      playlist[currentIndex].thumb = `https://img.youtube.com/vi/${playlist[currentIndex].id}/default.jpg`;
       updatePlaylistDisplay();
     }
   }
@@ -177,11 +200,37 @@ function updatePlaylistDisplay() {
   container.innerHTML = "";
   playlist.forEach((song, i) => {
     const div = document.createElement("div");
-    div.textContent = song.title || "(Carregando título...)";
     div.className = "song" + (i === currentIndex ? " current" : "");
     div.onclick = () => playSong(i);
+
+    const img = document.createElement("img");
+    img.src = song.thumb || `https://img.youtube.com/vi/${song.id}/default.jpg`;
+
+    const info = document.createElement("div");
+    info.className = "info";
+
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = song.title || "(Carregando título...)";
+
+    const duration = document.createElement("div");
+    duration.className = "duration";
+    duration.textContent = song.duration || "";
+
+    info.appendChild(title);
+    info.appendChild(duration);
+
+    div.appendChild(img);
+    div.appendChild(info);
     container.appendChild(div);
   });
+}
+
+function formatTime(sec) {
+  sec = Math.floor(sec);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
 function addSong(url) {
@@ -190,7 +239,7 @@ function addSong(url) {
     alert("Link inválido!");
     return;
   }
-  playlist.push({ id, title: "(Carregando título...)" });
+  playlist.push({ id, title: "(Carregando título...)", duration: "", thumb: `https://img.youtube.com/vi/${id}/default.jpg` });
   updatePlaylistDisplay();
   // Só toca automaticamente se for a primeira música
   if (playlist.length === 1) {
