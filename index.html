@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Player de Música</title>
+<title>Demonstração de comandos de musica</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -235,31 +235,28 @@ function createHiddenPlayer() {
 
 createHiddenPlayer();
 
-// ----------- Music Visualizer arco-íris (fake, animado) -----------
+// ----------- Music Visualizer (fake bars) -----------
 const visualizer = document.getElementById("music-visualizer");
 const vctx = visualizer.getContext("2d");
 let visAnimId = null;
 let visActive = false;
 
-// Função para gerar cor arco-íris (HSL)
-function rainbowColor(i, bars, time) {
-  const hue = ((i / bars) * 360 + time * 60) % 360;
-  return `hsl(${hue}, 90%, 55%)`;
-}
-
 function drawVisualizer(bars = 32) {
+  // Responsivo
   const W = visualizer.width = visualizer.offsetWidth;
   const H = visualizer.height;
   vctx.clearRect(0, 0, W, H);
 
   for (let i = 0; i < bars; i++) {
+    // Fake animation: use Math.sin + current time for effect
     const time = Date.now() / 700;
-    const amplitude = visActive ? (0.35 + 0.6 * Math.abs(Math.sin(time + i/2))) : 0.15;
-    const barHeight = amplitude * H * (0.7 + 0.3 * Math.sin(i + time/2));
+    // Animate based on playing state
+    const amplitude = visActive ? (0.4 + 0.6 * Math.abs(Math.sin(time + i))) : 0.15;
+    const barHeight = amplitude * H * (0.8 + 0.2 * Math.sin(i + time));
     const x = i * (W / bars);
-    const barWidth = (W / bars) * 0.7;
-
-    vctx.fillStyle = visActive ? rainbowColor(i, bars, time) : "#aaa";
+    const barWidth = (W / bars) * 0.8;
+    // Color: blue if playing, gray if paused
+    vctx.fillStyle = visActive ? "#0078ff" : "#aaa";
     vctx.fillRect(x, H - barHeight, barWidth, barHeight);
   }
 }
@@ -282,10 +279,10 @@ function stopVisualizer() {
   }
 }
 
+// Responsivo ao redimensionar janela
 window.addEventListener("resize", () => drawVisualizer());
-drawVisualizer();
+drawVisualizer(); // Inicializa
 
-// ----------- YouTube Player -----------
 function onYouTubeIframeAPIReady() {
   player = new YT.Player('player', {
     height: '1',
@@ -306,7 +303,7 @@ function onPlayerStateChange(event) {
     duration = player.getDuration();
     updateProgressBar();
     startProgressBarInterval();
-    startVisualizer();
+    startVisualizer(); // visualizer ON
     const data = player.getVideoData();
     const dur = formatTime(duration);
     if (playlist[currentIndex]) {
@@ -319,7 +316,7 @@ function onPlayerStateChange(event) {
   }
   if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
     stopProgressBarInterval();
-    stopVisualizer();
+    stopVisualizer(); // visualizer OFF
   }
 }
 
