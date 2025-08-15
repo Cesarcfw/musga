@@ -1,161 +1,288 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Player de Música</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-      transition: background 0.3s, color 0.3s;
-    }
-
-    body.dark {
-      background-color: #121212;
-      color: white;
-    }
-
-    h1 {
-      margin-bottom: 15px;
-    }
-
-    .controls {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
-    }
-
-    button {
-      padding: 10px 15px;
-      font-size: 16px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      opacity: 0.8;
-    }
-
-    input[type="text"] {
-      padding: 10px;
-      width: 300px;
-      max-width: 80%;
-    }
-
-    .progress-container {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      width: 100%;
-      max-width: 400px;
-    }
-
-    input[type="range"] {
-      flex: 1;
-    }
-
-    .time {
-      font-size: 14px;
-      min-width: 50px;
-      text-align: center;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Player de Música</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 2rem;
+    background: var(--bg-color);
+    color: var(--text-color);
+    transition: background 0.3s, color 0.3s;
+  }
+  :root {
+    --bg-color: #f7f7f7;
+    --text-color: #333;
+    --card-bg: #fff;
+    --highlight: #d0eaff;
+  }
+  body.dark {
+    --bg-color: #1e1e1e;
+    --text-color: #eee;
+    --card-bg: #2c2c2c;
+    --highlight: #3a4d5c;
+  }
+  h2 {
+    text-align: center;
+    color: var(--text-color);
+  }
+  #controls {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+  input, button {
+    padding: 0.5rem;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background: var(--card-bg);
+    color: var(--text-color);
+  }
+  button {
+    cursor: pointer;
+    border: none;
+  }
+  button.action {
+    background: #0078ff;
+    color: white;
+  }
+  button.action:hover {
+    background: #005fc0;
+  }
+  #playlist {
+    margin-top: 1.5rem;
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 0.5rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  .song {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-bottom: 1px solid #5553;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .song:hover {
+    background: var(--highlight);
+  }
+  .song img {
+    width: 60px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+  .song .info {
+    flex: 1;
+  }
+  .song .title {
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .song .duration {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+  .current {
+    background: var(--highlight);
+    font-weight: bold;
+  }
+  #player {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+  #top-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+</style>
 </head>
 <body>
-  <h1>Player de Música</h1>
 
-  <!-- Barra de Progresso -->
-  <div class="progress-container">
-    <span id="current-time" class="time">0:00</span>
-    <input type="range" id="progress-bar" value="0" min="0" max="100">
-    <span id="duration" class="time">0:00</span>
-  </div>
+<div id="top-bar">
+  <button id="toggleTheme">🌙 Modo Escuro</button>
+</div>
 
-  <!-- Campo de link -->
-  <input type="text" id="music-link" placeholder="Cole o link da música do YouTube">
+<h2>🎵 Player de Música</h2>
 
-  <!-- Botões -->
-  <div class="controls">
-    <button onclick="playMusic()">Tocar</button>
-    <button onclick="goBack()">Voltar Música</button>
-    <button onclick="toggleDarkMode()">Modo Escuro</button>
-  </div>
+<div style="text-align:center;">
+  <input type="text" id="inputLink" placeholder="Cole link do YouTube aqui" style="width: 300px;" />
+  <button id="btnAdd" class="action">Adicionar</button>
+</div>
 
-  <!-- Player invisível -->
-  <audio id="audio-player" controls style="display:none;"></audio>
+<div id="controls">
+  <button id="btnPrev" class="action">⏮ Voltar</button>
+  <button id="btnPlay" class="action">▶ Play</button>
+  <button id="btnPause" class="action">⏸ Pause</button>
+  <button id="btnSkip" class="action">⏭ Avançar</button>
+  <button id="btnStop" class="action">⏹ Parar</button>
+</div>
 
-  <script>
-    let audioPlayer = document.getElementById('audio-player');
-    let progressBar = document.getElementById('progress-bar');
-    let currentTimeEl = document.getElementById('current-time');
-    let durationEl = document.getElementById('duration');
-    let musicQueue = [];
-    let currentIndex = 0;
+<div id="player"></div>
+<div id="playlist"></div>
 
-    function playMusic() {
-      let link = document.getElementById('music-link').value.trim();
-      if (link) {
-        // Converter para link direto (usando YouTube API externa é melhor, mas aqui é demo)
-        musicQueue.push(link);
-        if (audioPlayer.src === "") {
-          currentIndex = 0;
-          startPlaying();
-        }
-        document.getElementById('music-link').value = "";
-      }
+<script>
+// ----------- Tema (Modo Escuro/Claro) -----------
+function loadTheme() {
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark");
+    document.getElementById("toggleTheme").textContent = "☀ Modo Claro";
+  }
+}
+function toggleTheme() {
+  document.body.classList.toggle("dark");
+  const isDark = document.body.classList.contains("dark");
+  document.getElementById("toggleTheme").textContent = isDark ? "☀ Modo Claro" : "🌙 Modo Escuro";
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+}
+document.getElementById("toggleTheme").onclick = toggleTheme;
+loadTheme();
+
+// ----------- YouTube Player API -----------
+var tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+document.body.appendChild(tag);
+
+let player;
+let playlist = []; // [{id, title, duration, thumb}]
+let currentIndex = 0;
+
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player('player', {
+    height: '360',
+    width: '640',
+    events: {
+      'onReady': () => console.log("Player pronto!"),
+      'onStateChange': onPlayerStateChange
     }
+  });
+}
 
-    function startPlaying() {
-      audioPlayer.src = musicQueue[currentIndex];
-      audioPlayer.play();
+function onPlayerStateChange(event) {
+  if (event.data === YT.PlayerState.ENDED) {
+    skip();
+  }
+  if (event.data === YT.PlayerState.PLAYING) {
+    const data = player.getVideoData();
+    const dur = formatTime(player.getDuration());
+    if (playlist[currentIndex]) {
+      playlist[currentIndex].title = data.title;
+      playlist[currentIndex].duration = dur;
+      playlist[currentIndex].thumb = `https://img.youtube.com/vi/${playlist[currentIndex].id}/default.jpg`;
+      updatePlaylistDisplay();
     }
+  }
+}
 
-    function goBack() {
-      if (currentIndex > 0) {
-        currentIndex--;
-        startPlaying();
-      }
-    }
+function extractVideoId(url) {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
 
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark');
-    }
+function playSong(index) {
+  if (index < 0 || index >= playlist.length) return;
+  currentIndex = index;
+  updatePlaylistDisplay();
+  player.loadVideoById(playlist[index].id);
+}
 
-    // Atualizar barra de progresso
-    audioPlayer.addEventListener('timeupdate', () => {
-      progressBar.value = (audioPlayer.currentTime / audioPlayer.duration) * 100 || 0;
-      currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
-      durationEl.textContent = formatTime(audioPlayer.duration);
-    });
+function updatePlaylistDisplay() {
+  const container = document.getElementById("playlist");
+  container.innerHTML = "";
+  playlist.forEach((song, i) => {
+    const div = document.createElement("div");
+    div.className = "song" + (i === currentIndex ? " current" : "");
+    div.onclick = () => playSong(i);
 
-    // Alterar posição da música
-    progressBar.addEventListener('input', () => {
-      audioPlayer.currentTime = (progressBar.value / 100) * audioPlayer.duration;
-    });
+    const img = document.createElement("img");
+    img.src = song.thumb || `https://img.youtube.com/vi/${song.id}/default.jpg`;
 
-    function formatTime(seconds) {
-      if (isNaN(seconds)) return "0:00";
-      let m = Math.floor(seconds / 60);
-      let s = Math.floor(seconds % 60);
-      return `${m}:${s < 10 ? '0' : ''}${s}`;
-    }
+    const info = document.createElement("div");
+    info.className = "info";
 
-    // Pular para próxima música quando acabar
-    audioPlayer.addEventListener('ended', () => {
-      if (currentIndex < musicQueue.length - 1) {
-        currentIndex++;
-        startPlaying();
-      }
-    });
-  </script>
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = song.title || "(Carregando título...)";
+
+    const duration = document.createElement("div");
+    duration.className = "duration";
+    duration.textContent = song.duration || "";
+
+    info.appendChild(title);
+    info.appendChild(duration);
+
+    div.appendChild(img);
+    div.appendChild(info);
+    container.appendChild(div);
+  });
+}
+
+function formatTime(sec) {
+  sec = Math.floor(sec);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+function addSong(url) {
+  const id = extractVideoId(url);
+  if (!id) {
+    alert("Link inválido!");
+    return;
+  }
+  playlist.push({ id, title: "(Carregando título...)", duration: "", thumb: `https://img.youtube.com/vi/${id}/default.jpg` });
+  updatePlaylistDisplay();
+  // Só toca automaticamente se for a primeira música
+  if (playlist.length === 1) {
+    playSong(0);
+  }
+}
+
+function skip() {
+  if (currentIndex + 1 < playlist.length) {
+    playSong(currentIndex + 1);
+  } else {
+    player.stopVideo();
+    alert("Fim da playlist.");
+  }
+}
+
+function prevSong() {
+  if (currentIndex > 0) {
+    playSong(currentIndex - 1);
+  } else {
+    alert("Já está na primeira música.");
+  }
+}
+
+// ----------- Botões -----------
+document.getElementById("btnAdd").onclick = () => {
+  const url = document.getElementById("inputLink").value.trim();
+  if (url) {
+    addSong(url);
+    document.getElementById("inputLink").value = "";
+  }
+};
+document.getElementById("btnPlay").onclick = () => player.playVideo();
+document.getElementById("btnPause").onclick = () => player.pauseVideo();
+document.getElementById("btnSkip").onclick = skip;
+document.getElementById("btnPrev").onclick = prevSong;
+document.getElementById("btnStop").onclick = () => {
+  player.stopVideo();
+  playlist = [];
+  currentIndex = 0;
+  updatePlaylistDisplay();
+};
+</script>
+
 </body>
 </html>
